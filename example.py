@@ -5,15 +5,19 @@
 import sys
 import logging
 import time
+from pathlib import Path
 from os import environ as env
 from time import sleep
 from dotenv import load_dotenv
+
 
 from softphone.AIL_utills import AIL_Softphone
 from softphone.Softphone import Softphone
 from softphone.AudioCallbacks import EchoAudioCB, SystemAudioCB, AILAudioCB
 
 load_dotenv(dotenv_path='.env.tmpl')
+Path('temp/audio/').mkdir(parents=True, exist_ok=True)
+Path('temp/rec/').mkdir(parents=True, exist_ok=True)
 
 logging.basicConfig(
     filename='example.log',
@@ -70,7 +74,7 @@ while True:
         print(70, 'Начинаем звонить')
         softphone.wait_for_confirmed_call()
         print(72, 'Клиент взял трубку')
-        softphone.capture(file_name=f'temp/audio/{time.ctime()}_{number}.wav')
+        softphone.capture(file_name=f'temp/audio1/{time.ctime()}_{number}.wav')
         print(74, 'Начало записи разговора')
         softphone.playback(file_name=f'temp/SG.wav')
         softphone.wait_for_active_audio()
