@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
-# -*- coding: latin-1 -*-
+# -*- coding: utf-8 -*-
 # Built with pjproject (fork py37) - https://github.com/DiscordPhone/pjproject/tree/py37
 
 import sys
 import logging
+import time
 from os import environ as env
 from time import sleep
 from dotenv import load_dotenv
-from softphone.Softphone import Softphone
-from softphone.AudioCallbacks import EchoAudioCB, SystemAudioCB
 
-load_dotenv(dotenv_path='.env')
+from softphone.AIL_utills import AIL_Softphone
+from softphone.Softphone import Softphone
+from softphone.AudioCallbacks import EchoAudioCB, SystemAudioCB, AILAudioCB
+
+load_dotenv(dotenv_path='.env.tmpl')
 
 logging.basicConfig(
     filename='example.log',
@@ -20,45 +23,75 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-softphone = Softphone()
+common_sample_rate = 16000
+max_media_ports = 64
+
+softphone = AIL_Softphone(sample_rate=common_sample_rate, max_media_ports=max_media_ports)
+
 softphone.set_null_sound_device()
-#inbound = self.softphone.register(...) # Registration of account for incoming calls
+
 outbound = softphone.register(
-    server   = env.get('SIP_OUTBOUND_HOST'),
-    port     = env.get('SIP_OUTBOUND_PORT'),
-    username = env.get('SIP_OUTBOUND_USER'),
-    password = env.get('SIP_OUTBOUND_PASS')
+    server=env.get('SIP_OUTBOUND_HOST'),
+    port=env.get('SIP_OUTBOUND_PORT'),
+    username=env.get('SIP_OUTBOUND_USER'),
+    password=env.get('SIP_OUTBOUND_PASS')
 )
 
 # There are some cases when you need this, read the documentation for it. It is used when having python threads.
-# softphone.lib.thread_register("python worker")
+softphone.lib.thread_register("python worker")
 
-print("Softphone is now ready...")
+print("\n\nSoftphone is now ready...")
 
 while True:
-    sleep(2) # Just wait for the call state messages for a bit.. :)
-    print("")
-    print("+-Menu-------------+")
-    print("| m  = make call   |")
-    print("| h  = hangup call |")
-    print("| a  = answer call |")
-    print("| q  = quit        |")
-    print("+------------------+")
-    choice = input("> ")
+    sleep(1)  # Just wait for the call state messages for a bit.. :)
+    print('\n' * 2)
+    print("+-Menu-----------------+")
+    print("| m  = make call (def) |")
+    print("| h  = hangup call     |")
+    print("| a  = answer call     |")
+    print("| q  = quit            |")
+    print("+----------------------+")
+    # choice = input("> ")
+    choice = 'm'
 
     if choice == 'm':
-        number = input("Number with country code 00x (ex: 0014446665555)> ")
-        sip_uri = f"sip:{number}@{env.get('SIP_OUTBOUND_HOST')}:{env.get('SIP_OUTBOUND_PORT')}"
+        # number = input("Number with country code 00x (ex: 0014446665555)> ")
+        number = '89996914784'
+        # number = '89996990691'  # Саня Г.
+        sip_uri = f'sip:{number}@{env.get("SIP_OUTBOUND_HOST")}:{env.get("SIP_OUTBOUND_PORT")}'
 
+        # TODO: make a stream for permanent speech recording
         # TODO: Check if instantiating audio_buffer without self. gives less lag.
-        audio_buffer = EchoAudioCB() # Alternatively an AudioCB with two buffers if relaying between two systems.
-        softphone.create_audio_stream(audio_buffer) # Move this inside call maybe?
-        softphone.call(outbound, sip_uri)
-        #softphone.wait_for_active_audio() # Wait for active audio before we listen. Use this if you are using threads. Blocking operation.
+        audio_buffer = AILAudioCB(sample_rate=common_sample_rate)
 
-        # If two systems, connect them below. 
-        #system2.listen(audio_buffer)
-        #system2.play(audio_buffer)
+        print('\n\n\n')
+        softphone.create_audio_stream(audio_buffer)  # Move this inside call maybe?
+        softphone.call(outbound, sip_uri)
+        print(70, 'Начинаем звонить')
+        softphone.wait_for_confirmed_call()
+        print(72, 'Клиент взял трубку')
+        softphone.capture(file_name=f'temp/audio/{time.ctime()}_{number}.wav')
+        print(74, 'Начало записи разговора')
+        softphone.playback(file_name=f'temp/SG.wav')
+        softphone.wait_for_active_audio()
+        print(77, 'Активация голоса оператора оператора')
+        time.sleep(3)
+        softphone.stop_playback()
+        print(80, f'Стоп воспроизведения аудио оператора по истечении некоторого времени')
+        softphone.start_listening()
+        time.sleep(5)
+        softphone.stop_listening()
+        time.sleep(3)
+        softphone.get_buffer_t(save=f'temp/rec/{time.ctime()}_{number}.wav')
+        print(87, f'Записываем в файл весь аудиобуфер')
+        softphone.stop_capturing()
+        print(89, f'stop_capturing')
+        softphone.end_call()
+        print(91, f'end_call')
+        softphone.destroy_audio_stream()
+        print(93, f'destroy_audio_stream')
+        print(94, f'Полное завершение разговора')
+        exit()
 
     if choice == 'a':
         # TODO: Must be implemented.
@@ -70,8 +103,10 @@ while True:
 
     if choice == 'q':
         print('Exiting...')
-        #softphone.unregister(inbound)
+        # softphone.unregister(inbound)
         softphone.unregister(outbound)
         sys.exit()
 
-#end
+# end
+
+# python3: ../src/pjmedia/conference.c:986: pjmedia_conf_connect_port: Assertion `conf && src_slot<conf->max_ports && sink_slot<conf->max_ports' failed.
