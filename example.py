@@ -34,6 +34,7 @@ softphone = AIL_Softphone(sample_rate=common_sample_rate, max_media_ports=max_me
 
 softphone.set_null_sound_device()
 
+print(env)
 outbound = softphone.register(
     server=env.get('SIP_OUTBOUND_HOST'),
     port=env.get('SIP_OUTBOUND_PORT'),

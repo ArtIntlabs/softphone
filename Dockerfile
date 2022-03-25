@@ -7,12 +7,11 @@ RUN poetry lock
 RUN poetry install --no-interaction --no-dev
 
 # PJSIP
-RUN apt install python python-dev build-essential libasound2-dev -y
+RUN apt install python python-dev build-essential libasound2-dev libportaudio2 -y
 RUN wget https://github.com/DiscordPhone/pjproject/archive/py37.zip
 RUN unzip py37.zip
 RUN chmod +x pjproject-py37/configure pjproject-py37/aconfigure
 
-RUN pwd
 WORKDIR pjproject-py37/
 RUN ./configure CXXFLAGS=-fPIC CFLAGS=-fPIC LDFLAGS=-fPIC CPPFLAGS=-fPIC
 RUN make dep
