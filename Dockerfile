@@ -28,5 +28,6 @@ WORKDIR /
 RUN python -m pip install https://github.com/ArtIntlabs/softphone/archive/master.zip --user
 
 EXPOSE 80
+COPY .env.tmpl ./.env.tmpl
 COPY example.py ./example.py
 CMD python example.py
